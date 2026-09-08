@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Wordle: Head to Head</title>
+<meta name="theme-color" content="#6aaa64">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Wordle H2H">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='14' fill='%236aaa64'/><text x='50' y='68' font-size='52' font-family='Arial' font-weight='bold' fill='white' text-anchor='middle'>W</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#fbfbf9;
+    --ink:#1a1a1b;
+    --muted:#787c7e;
+    --green:#6aaa64;
+    --green-dark:#538d4e;
+    --yellow:#c9b458;
+    --tile-border:#d3d6da;
+    --card:#ffffff;
+    --radius:8px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    font-family:'Libre Franklin',-apple-system,'Helvetica Neue',Arial,sans-serif;
+    background:var(--bg);color:var(--ink);
+    padding:max(16px,env(safe-area-inset-top)) 16px calc(48px + env(safe-area-inset-bottom));
+  }
+  .wrap{max-width:480px;margin:0 auto}
+  button{font-family:inherit;cursor:pointer}
+  :focus-visible{outline:3px solid var(--green-dark);outline-offset:2px;border-radius:4px}
+
+  /* ---------- header ---------- */
+  header{text-align:center;margin-bottom:20px}
+  header .kicker{font-size:13px;font-weight:600;color:var(--muted);letter-spacing:.02em}
+  header h1{font-weight:900;font-size:30px;letter-spacing:-.02em;line-height:1.1}
+
+  /* ---------- champion banner ---------- */
+  .champ-banner{
+    background:var(--green);color:#fff;border-radius:var(--radius);
+    padding:14px 16px;text-align:center;margin-bottom:16px;
+  }
+  .champ-banner .big{font-weight:900;font-size:20px}
+  .champ-banner .sub{font-size:14px;opacity:.92;margin-top:2px}
+  .champ-banner button{
+    margin-top:10px;background:#fff;color:var(--green-dark);border:0;
+    font-weight:700;font-size:14px;padding:9px 16px;border-radius:6px;
+  }
+
+  /* ---------- scoreboard ---------- */
+  .board{background:var(--card);border:1.5px solid var(--tile-border);border-radius:var(--radius);padding:18px 16px 16px;margin-bottom:16px}
+  .score-row{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:6px}
+  .score-col{flex:1;text-align:center;min-width:0}
+  .score-col .name{font-weight:700;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:8px}
+  .score-tile{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:72px;height:72px;border-radius:6px;
+    font-size:38px;font-weight:900;
+    background:#fff;border:2px solid var(--tile-border);color:var(--ink);
+  }
+  .score-tile.lead{background:var(--green);border-color:var(--green);color:#fff}
+  .score-vs{font-weight:600;color:var(--muted);font-size:14px;padding-top:22px}
+  .draws{text-align:center;font-size:13px;color:var(--muted);margin:4px 0 14px}
+
+  .tracks{display:flex;flex-direction:column;gap:12px}
+  .track .track-label{display:flex;justify-content:space-between;font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:5px}
+  .track .cells{display:grid;grid-template-columns:repeat(15,1fr);gap:3px}
+  .cell{
+    aspect-ratio:1;border-radius:2.5px;background:#fff;border:1.5px solid var(--tile-border);
+  }
+  .cell.won{background:var(--green);border-color:var(--green);animation:pop .25s ease both}
+  @keyframes pop{from{transform:scale(.6);opacity:.3}to{transform:scale(1);opacity:1}}
+  .track .goal{font-size:12.5px}
+
+  /* ---------- cards / forms ---------- */
+  .card{background:var(--card);border:1.5px solid var(--tile-border);border-radius:var(--radius);padding:16px;margin-bottom:16px}
+  .card h2{font-size:17px;font-weight:700;margin-bottom:12px}
+  label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:6px}
+  input[type=date],input[type=text],input[type=number]{
+    width:100%;padding:10px 12px;font-size:16px;font-family:inherit;
+    border:1.5px solid var(--tile-border);border-radius:6px;background:#fff;color:var(--ink);
+  }
+  .field{margin-bottom:14px}
+
+  .guess-row{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+  .guess-btn{
+    aspect-ratio:1;border:1.5px solid var(--tile-border);border-radius:5px;background:#fff;
+    font-size:17px;font-weight:700;color:var(--ink);
+  }
+  .guess-btn[aria-pressed=true]{background:var(--green);border-color:var(--green);color:#fff}
+  .guess-btn.is-x[aria-pressed=true]{background:var(--muted);border-color:var(--muted)}
+  .hint{font-size:12.5px;color:var(--muted);margin-top:6px}
+
+  .btn-primary{
+    width:100%;padding:14px;border:0;border-radius:6px;background:var(--ink);color:#fff;
+    font-size:16px;font-weight:700;margin-top:4px;
+  }
+  .btn-primary:disabled{opacity:.35;cursor:default}
+  .btn-quiet{background:none;border:1.5px solid var(--tile-border);border-radius:6px;padding:9px 14px;font-size:14px;font-weight:600;color:var(--ink)}
+  .btn-danger{border-color:#d66;color:#b33}
+  .form-note{font-size:13px;color:var(--green-dark);font-weight:600;margin-top:8px;text-align:center}
+
+  /* ---------- history ---------- */
+  .hist-item{border-top:1px solid #ececec;padding:10px 2px}
+  .hist-item:first-of-type{border-top:0}
+  .hist-head{display:flex;align-items:center;gap:10px;background:none;border:0;width:100%;text-align:left;padding:2px 0;font-size:14px}
+  .hist-date{flex:1;font-weight:600}
+  .mini{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:4px;font-weight:800;font-size:14px;color:#fff}
+  .mini.w{background:var(--green)}
+  .mini.l{background:var(--muted)}
+  .mini.t{background:var(--yellow)}
+  .hist-actions{display:flex;gap:8px;padding:8px 0 2px}
+  .empty{color:var(--muted);font-size:14px;text-align:center;padding:10px 0}
+
+  /* ---------- stats ---------- */
+  .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .stat{border:1.5px solid var(--tile-border);border-radius:6px;padding:10px 12px}
+  .stat .v{font-weight:800;font-size:17px}
+  .stat .k{font-size:12px;color:var(--muted);font-weight:600;margin-top:2px}
+
+  /* ---------- settings ---------- */
+  details.card{padding:0}
+  details.card summary{list-style:none;padding:16px;font-size:17px;font-weight:700;cursor:pointer}
+  details.card summary::-webkit-details-marker{display:none}
+  details.card summary::after{content:'+';float:right;font-weight:700;color:var(--muted)}
+  details[open].card summary::after{content:'–'}
+  .settings-body{padding:0 16px 16px}
+  .settings-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+  .seasons li{font-size:14px;margin:6px 0 0 18px}
+
+  /* ---------- trophy overlay ---------- */
+  .overlay{
+    position:fixed;inset:0;background:rgba(20,20,21,.94);z-index:50;
+    display:flex;align-items:center;justify-content:center;padding:24px;
+  }
+  .overlay-inner{text-align:center;max-width:420px;width:100%}
+  .trophy{font-size:72px;margin-bottom:8px}
+  .flip-row{display:flex;justify-content:center;gap:5px;margin:14px 0}
+  .flip{
+    width:46px;height:46px;display:flex;align-items:center;justify-content:center;
+    background:var(--green);color:#fff;font-weight:900;font-size:24px;border-radius:4px;
+    animation:flipin .5s ease both;
+  }
+  @keyframes flipin{0%{transform:rotateX(90deg);opacity:0}100%{transform:rotateX(0);opacity:1}}
+  .overlay .line{color:#fff;font-size:17px;font-weight:600;margin-bottom:4px}
+  .overlay .score-line{color:#cfcfcf;font-size:15px;margin-bottom:20px}
+  .overlay .actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  .overlay .actions .btn-primary{width:auto;padding:12px 18px;background:var(--green)}
+  .overlay .actions .btn-quiet{color:#fff;border-color:#666}
+
+  @media (prefers-reduced-motion:reduce){
+    .cell.won,.flip{animation:none}
+  }
+  @media (max-width:360px){
+    .score-tile{width:60px;height:60px;font-size:32px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="kicker">First to 30 takes the trophy</div>
+    <h1>Wordle: Head to Head</h1>
+  </header>
+
+  <div id="champBanner"></div>
+  <div id="board"></div>
+
+  <section class="card" id="entryCard" aria-label="Record a result">
+    <h2 id="entryTitle">Today's result</h2>
+    <div class="field">
+      <label for="dateInput">Date</label>
+      <input type="date" id="dateInput">
+    </div>
+    <div class="field">
+      <label id="lblA">Player 1 — guesses</label>
+      <div class="guess-row" id="rowA" role="group" aria-labelledby="lblA"></div>
+    </div>
+    <div class="field">
+      <label id="lblB">Player 2 — guesses</label>
+      <div class="guess-row" id="rowB" role="group" aria-labelledby="lblB"></div>
+    </div>
+    <p class="hint">Fewer guesses wins the day. X means the word got away. Same score is a draw.</p>
+    <button class="btn-primary" id="saveBtn" disabled>Save result</button>
+    <div id="formNote"></div>
+  </section>
+
+  <section class="card" id="statsCard" hidden aria-label="Statistics">
+    <h2>Stats</h2>
+    <div class="stat-grid" id="statGrid"></div>
+  </section>
+
+  <section class="card" aria-label="Results history">
+    <h2>Results</h2>
+    <div id="histList"></div>
+  </section>
+
+  <details class="card">
+    <summary>Settings &amp; data</summary>
+    <div class="settings-body">
+      <div class="field">
+        <label for="nameA">Player 1 name</label>
+        <input type="text" id="nameA" maxlength="18" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="nameB">Player 2 name</label>
+        <input type="text" id="nameB" maxlength="18" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="targetInput">Wins needed for the trophy</label>
+        <input type="number" id="targetInput" min="1" max="500" inputmode="numeric">
+      </div>
+      <button class="btn-quiet" id="saveSettings">Save settings</button>
+      <div class="settings-row">
+        <button class="btn-quiet" id="exportBtn">Export backup</button>
+        <button class="btn-quiet" id="importBtn">Import backup</button>
+        <input type="file" id="importFile" accept="application/json" hidden>
+      </div>
+      <div class="settings-row">
+        <button class="btn-quiet btn-danger" id="resetBtn">Erase everything</button>
+      </div>
+      <div id="seasonsBlock"></div>
+      <p class="hint" style="margin-top:12px">The scoreboard is shared — you both see the same games, names, and stats, and either of you can log a result. Export saves a backup file just in case.</p>
+    </div>
+  </details>
+
+</div>
+
+<div id="overlayRoot"></div>
+
+<script>
+(function(){
+  'use strict';
+  var CACHE='wh2h_cache_v2';   // local copy for instant paint
+  var LEGACY='wh2h_v1';        // v1 phone-only data, migrated on first sync
+  var X=7; // internal value for a failed puzzle
+
+  var state=loadCache();
+  var saving=false, resaveNeeded=false;
+
+  function defaults(){
+    return {a:'Player 1', b:'Player 2', target:30, games:[], seasons:[], celebrated:false};
+  }
+  function normalize(s){
+    var d=defaults();
+    if(!s || typeof s!=='object') return d;
+    for(var k in d){ if(s[k]===undefined) s[k]=d[k]; }
+    return s;
+  }
+  function loadCache(){
+    try{ return normalize(JSON.parse(localStorage.getItem(CACHE))); }
+    catch(e){ return defaults(); }
+  }
+  function cacheState(){ try{ localStorage.setItem(CACHE,JSON.stringify(state)); }catch(e){} }
+
+  // Every change is written to the shared scoreboard so both players see it.
+  function save(){
+    cacheState();
+    if(saving){ resaveNeeded=true; return; }
+    saving=true;
+    fetch('/api/state',{
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(state)
+    }).then(function(r){
+      if(!r.ok){
+        return r.json().then(function(j){ throw new Error(j.error||('HTTP '+r.status)); },
+                             function(){ throw new Error('HTTP '+r.status); });
+      }
+    }).catch(function(e){
+      alert('Couldn\u2019t sync that change to the shared scoreboard \u2014 check your connection and try again.\n\n('+e.message+')');
+    }).finally(function(){
+      saving=false;
+      if(resaveNeeded){ resaveNeeded=false; save(); }
+    });
+  }
+
+  // Pull the latest shared state (on open, when the app comes back to front, and once a minute).
+  function refreshFromServer(){
+    if(saving) return;
+    fetch('/api/state',{cache:'no-store'})
+      .then(function(r){ return r.ok ? r.json() : Promise.reject(); })
+      .then(function(remote){
+        if(saving) return;
+        if(remote){
+          state=normalize(remote); cacheState();
+          syncSettingsInputs(); renderAll();
+        }else{
+          // Shared scoreboard is empty: push up v1 phone-only data if this device has any.
+          var legacy=null;
+          try{ legacy=JSON.parse(localStorage.getItem(LEGACY)); }catch(e){}
+          if(legacy && Array.isArray(legacy.games) && legacy.games.length){
+            state=normalize(legacy); syncSettingsInputs(); renderAll(); save();
+          }else if(state.games.length || state.seasons.length){
+            save();
+          }
+        }
+      })
+      .catch(function(){ /* offline or not deployed yet: keep showing the cached copy */ });
+  }
+
+  /* ---------- helpers ---------- */
+  function todayStr(){
+    var d=new Date();
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }
+  function fmtDate(iso){
+    var p=iso.split('-');
+    var d=new Date(+p[0],+p[1]-1,+p[2]);
+    return d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
+  }
+  function winnerOf(g){ // 'a' | 'b' | 't'
+    if(g.a===g.b) return 't';
+    return g.a<g.b ? 'a' : 'b';
+  }
+  function tally(){
+    var wa=0,wb=0,t=0;
+    state.games.forEach(function(g){
+      var w=winnerOf(g);
+      if(w==='a')wa++; else if(w==='b')wb++; else t++;
+    });
+    return {wa:wa,wb:wb,t:t};
+  }
+  function sortedGames(){
+    return state.games.slice().sort(function(x,y){ return x.d<y.d?-1:1; });
+  }
+  function el(id){ return document.getElementById(id); }
+  function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+
+  /* ---------- scoreboard ---------- */
+  function renderBoard(){
+    var s=tally();
+    var leadA=s.wa>s.wb, leadB=s.wb>s.wa;
+    var html='<div class="board">'
+      +'<div class="score-row">'
+      +'<div class="score-col"><div class="name">'+esc(state.a)+'</div><span class="score-tile'+(leadA?' lead':'')+'">'+s.wa+'</span></div>'
+      +'<div class="score-vs">vs</div>'
+      +'<div class="score-col"><div class="name">'+esc(state.b)+'</div><span class="score-tile'+(leadB?' lead':'')+'">'+s.wb+'</span></div>'
+      +'</div>'
+      +'<div class="draws">'+(s.t===1?'1 draw':s.t+' draws')+'</div>'
+      +'<div class="tracks">'+trackHTML(state.a,s.wa)+trackHTML(state.b,s.wb)+'</div>'
+      +'</div>';
+    el('board').innerHTML=html;
+  }
+  function trackHTML(name,wins){
+    var n=state.target, cells='';
+    for(var i=0;i<n;i++){
+      var won=i<wins;
+      var delay=won?' style="animation-delay:'+Math.min(i*30,900)+'ms"':'';
+      cells+='<div class="cell'+(won?' won':'')+'"'+delay+'></div>';
+    }
+    return '<div class="track">'
+      +'<div class="track-label"><span>'+esc(name)+'</span><span class="goal">'+wins+' / '+n+' 🏆</span></div>'
+      +'<div class="cells" style="grid-template-columns:repeat('+Math.min(n,15)+',1fr)">'+cells+'</div>'
+      +'</div>';
+  }
+
+  function renderBanner(){
+    var s=tally(), champ=null, score='';
+    if(s.wa>=state.target){ champ=state.a; score=s.wa+'–'+s.wb; }
+    else if(s.wb>=state.target){ champ=state.b; score=s.wb+'–'+s.wa; }
+    if(!champ){ el('champBanner').innerHTML=''; return; }
+    el('champBanner').innerHTML='<div class="champ-banner">'
+      +'<div class="big">🏆 '+esc(champ)+' takes the trophy</div>'
+      +'<div class="sub">Final score '+score+'</div>'
+      +'<button id="newSeasonBtn">Start a new race</button></div>';
+    el('newSeasonBtn').addEventListener('click',startNewSeason);
+  }
+
+  /* ---------- entry form ---------- */
+  var pick={a:null,b:null};
+  var editingDate=null;
+
+  function buildGuessRow(rowId,who){
+    var row=el(rowId); row.innerHTML='';
+    for(var v=1;v<=7;v++){
+      (function(v){
+        var b=document.createElement('button');
+        b.type='button';
+        b.className='guess-btn'+(v===X?' is-x':'');
+        b.textContent=(v===X?'X':v);
+        b.setAttribute('aria-pressed','false');
+        b.addEventListener('click',function(){
+          pick[who]=(pick[who]===v)?null:v;
+          refreshRow(rowId,who);
+          refreshSave();
+        });
+        row.appendChild(b);
+      })(v);
+    }
+  }
+  function refreshRow(rowId,who){
+    var kids=el(rowId).children;
+    for(var i=0;i<kids.length;i++){
+      kids[i].setAttribute('aria-pressed', pick[who]===i+1 ? 'true':'false');
+    }
+  }
+  function refreshSave(){
+    var d=el('dateInput').value;
+    el('saveBtn').disabled=!(d && pick.a && pick.b);
+    var exists=state.games.some(function(g){return g.d===d;});
+    if(editingDate && d===editingDate){
+      el('saveBtn').textContent='Update '+fmtDate(d);
+    }else if(exists){
+      el('saveBtn').textContent='Replace '+fmtDate(d);
+    }else{
+      el('saveBtn').textContent='Save result';
+    }
+  }
+  function resetForm(){
+    pick={a:null,b:null}; editingDate=null;
+    refreshRow('rowA','a'); refreshRow('rowB','b');
+    el('dateInput').value=todayStr();
+    el('entryTitle').textContent="Today's result";
+    refreshSave();
+  }
+  function noteFlash(msg){
+    el('formNote').innerHTML='<div class="form-note">'+esc(msg)+'</div>';
+    setTimeout(function(){ el('formNote').innerHTML=''; },2500);
+  }
+
+  function onSave(){
+    var d=el('dateInput').value;
+    if(!d||!pick.a||!pick.b) return;
+    var existing=state.games.find(function(g){return g.d===d;});
+    if(existing && d!==editingDate){
+      if(!confirm('A result is already saved for '+fmtDate(d)+'. Replace it?')) return;
+    }
+    state.games=state.games.filter(function(g){return g.d!==d;});
+    if(editingDate && editingDate!==d){
+      state.games=state.games.filter(function(g){return g.d!==editingDate;});
+    }
+    state.games.push({d:d,a:pick.a,b:pick.b});
+    save();
+    var savedDate=d;
+    resetForm();
+    renderAll();
+    noteFlash('Saved '+fmtDate(savedDate)+' ✓');
+    maybeCelebrate();
+  }
+
+  /* ---------- history ---------- */
+  var openRow=null;
+  function renderHistory(){
+    var list=el('histList');
+    var games=sortedGames().reverse();
+    if(!games.length){
+      list.innerHTML='<div class="empty">No games yet. Log today\u2019s Wordle above to start the race.</div>';
+      return;
+    }
+    list.innerHTML='';
+    games.forEach(function(g){
+      var w=winnerOf(g);
+      var item=document.createElement('div');
+      item.className='hist-item';
+      var ca=w==='a'?'w':(w==='t'?'t':'l');
+      var cb=w==='b'?'w':(w==='t'?'t':'l');
+      var head=document.createElement('button');
+      head.className='hist-head';
+      head.setAttribute('aria-expanded', openRow===g.d?'true':'false');
+      head.innerHTML='<span class="hist-date">'+fmtDate(g.d)+'</span>'
+        +'<span class="mini '+ca+'">'+(g.a===X?'X':g.a)+'</span>'
+        +'<span class="mini '+cb+'">'+(g.b===X?'X':g.b)+'</span>';
+      head.addEventListener('click',function(){
+        openRow=(openRow===g.d)?null:g.d;
+        renderHistory();
+      });
+      item.appendChild(head);
+      if(openRow===g.d){
+        var acts=document.createElement('div');
+        acts.className='hist-actions';
+        var eb=document.createElement('button');
+        eb.className='btn-quiet'; eb.textContent='Edit';
+        eb.addEventListener('click',function(){ loadIntoForm(g); });
+        var db=document.createElement('button');
+        db.className='btn-quiet btn-danger'; db.textContent='Delete';
+        db.addEventListener('click',function(){
+          if(confirm('Delete the result for '+fmtDate(g.d)+'?')){
+            state.games=state.games.filter(function(x){return x.d!==g.d;});
+            openRow=null; save(); renderAll();
+          }
+        });
+        acts.appendChild(eb); acts.appendChild(db);
+        item.appendChild(acts);
+      }
+      list.appendChild(item);
+    });
+  }
+  function loadIntoForm(g){
+    editingDate=g.d;
+    pick={a:g.a,b:g.b};
+    el('dateInput').value=g.d;
+    refreshRow('rowA','a'); refreshRow('rowB','b');
+    el('entryTitle').textContent='Editing '+fmtDate(g.d);
+    refreshSave();
+    el('entryCard').scrollIntoView({behavior:'smooth',block:'start'});
+  }
+
+  /* ---------- stats ---------- */
+  function renderStats(){
+    var games=sortedGames();
+    if(!games.length){ el('statsCard').hidden=true; return; }
+    el('statsCard').hidden=false;
+    var cur={who:null,n:0}, best={a:0,b:0}, run={who:null,n:0};
+    games.forEach(function(g){
+      var w=winnerOf(g);
+      if(w==='t') return;
+      if(run.who===w){ run.n++; } else { run={who:w,n:1}; }
+      if(run.n>best[w]) best[w]=run.n;
+      cur=run;
+    });
+    function avg(key){
+      var solved=games.filter(function(g){return g[key]!==X;});
+      if(!solved.length) return '—';
+      var s=solved.reduce(function(acc,g){return acc+g[key];},0);
+      return (s/solved.length).toFixed(2);
+    }
+    var curTxt = cur.who ? esc(cur.who==='a'?state.a:state.b)+' × '+cur.n : '—';
+    var stats=[
+      ['Games played', games.length],
+      ['Current streak', curTxt],
+      ['Avg guesses — '+esc(state.a), avg('a')],
+      ['Avg guesses — '+esc(state.b), avg('b')],
+      ['Longest streak — '+esc(state.a), best.a||'—'],
+      ['Longest streak — '+esc(state.b), best.b||'—']
+    ];
+    el('statGrid').innerHTML=stats.map(function(s){
+      return '<div class="stat"><div class="v">'+s[1]+'</div><div class="k">'+s[0]+'</div></div>';
+    }).join('');
+  }
+
+  /* ---------- trophy ---------- */
+  function maybeCelebrate(){
+    if(state.celebrated) return;
+    var s=tally(), champ=null, score='';
+    if(s.wa>=state.target){ champ=state.a; score=s.wa+'–'+s.wb; }
+    else if(s.wb>=state.target){ champ=state.b; score=s.wb+'–'+s.wa; }
+    if(!champ) return;
+    state.celebrated=true; save();
+    var word=champ.toUpperCase().replace(/[^A-Z]/g,'').slice(0,7)||'CHAMP';
+    var tiles=word.split('').map(function(ch,i){
+      return '<div class="flip" style="animation-delay:'+(i*120)+'ms">'+ch+'</div>';
+    }).join('');
+    el('overlayRoot').innerHTML='<div class="overlay" role="dialog" aria-modal="true" aria-label="Trophy winner">'
+      +'<div class="overlay-inner">'
+      +'<div class="trophy">🏆</div>'
+      +'<div class="flip-row">'+tiles+'</div>'
+      +'<div class="line">First to '+state.target+' — the trophy is decided.</div>'
+      +'<div class="score-line">Final score '+score+'</div>'
+      +'<div class="actions">'
+      +'<button class="btn-primary" id="ovNew">Start a new race</button>'
+      +'<button class="btn-quiet" id="ovClose">Close</button>'
+      +'</div></div></div>';
+    el('ovNew').addEventListener('click',function(){ closeOverlay(); startNewSeason(); });
+    el('ovClose').addEventListener('click',closeOverlay);
+  }
+  function closeOverlay(){ el('overlayRoot').innerHTML=''; }
+
+  function startNewSeason(){
+    var s=tally(), champ, score;
+    if(s.wa>=s.wb){ champ=state.a; score=s.wa+'–'+s.wb; } else { champ=state.b; score=s.wb+'–'+s.wa; }
+    if(!confirm('Archive this race ('+champ+' won '+score+') and start fresh at 0–0?')) return;
+    state.seasons.push({champ:champ,score:score,ended:todayStr()});
+    state.games=[]; state.celebrated=false;
+    openRow=null; save(); resetForm(); renderAll();
+  }
+
+  /* ---------- settings ---------- */
+  function renderSeasons(){
+    if(!state.seasons.length){ el('seasonsBlock').innerHTML=''; return; }
+    var items=state.seasons.slice().reverse().map(function(s){
+      return '<li>🏆 '+esc(s.champ)+' — '+esc(s.score)+' <span style="color:var(--muted)">('+fmtDate(s.ended)+')</span></li>';
+    }).join('');
+    el('seasonsBlock').innerHTML='<div style="margin-top:14px"><label>Past trophies</label><ul class="seasons">'+items+'</ul></div>';
+  }
+  function bindSettings(){
+    el('saveSettings').addEventListener('click',function(){
+      var a=el('nameA').value.trim(), b=el('nameB').value.trim();
+      var t=parseInt(el('targetInput').value,10);
+      if(a) state.a=a;
+      if(b) state.b=b;
+      if(t>=1 && t<=500){
+        if(t!==state.target) state.celebrated=false;
+        state.target=t;
+      }
+      save(); syncSettingsInputs(); renderAll();
+      noteFlash('Settings saved ✓');
+      maybeCelebrate();
+    });
+    el('exportBtn').addEventListener('click',function(){
+      var blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+      var a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);
+      a.download='wordle-h2h-backup-'+todayStr()+'.json';
+      document.body.appendChild(a); a.click();
+      setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },500);
+    });
+    el('importBtn').addEventListener('click',function(){ el('importFile').click(); });
+    el('importFile').addEventListener('change',function(e){
+      var f=e.target.files[0]; if(!f) return;
+      var r=new FileReader();
+      r.onload=function(){
+        try{
+          var s=JSON.parse(r.result);
+          if(!s || !Array.isArray(s.games)) throw 0;
+          if(!confirm('Replace the shared scoreboard with this backup? Both of you will see the imported data.')) return;
+          var d=defaults();
+          for(var k in d){ if(s[k]===undefined) s[k]=d[k]; }
+          state=s; save(); syncSettingsInputs(); resetForm(); renderAll();
+          noteFlash('Backup imported ✓');
+        }catch(err){ alert('That file doesn\u2019t look like a Wordle H2H backup.'); }
+        e.target.value='';
+      };
+      r.readAsText(f);
+    });
+    el('resetBtn').addEventListener('click',function(){
+      if(!confirm('Erase all games, seasons, and settings for BOTH of you?')) return;
+      if(!confirm('Last chance — this can\u2019t be undone. Erase everything?')) return;
+      state=defaults(); save(); syncSettingsInputs(); resetForm(); renderAll();
+    });
+  }
+  function syncSettingsInputs(){
+    el('nameA').value=state.a; el('nameB').value=state.b;
+    el('targetInput').value=state.target;
+    el('lblA').textContent=state.a+' — guesses';
+    el('lblB').textContent=state.b+' — guesses';
+  }
+
+  /* ---------- boot ---------- */
+  function renderAll(){
+    renderBanner(); renderBoard(); renderHistory(); renderStats(); renderSeasons();
+    el('lblA').textContent=state.a+' — guesses';
+    el('lblB').textContent=state.b+' — guesses';
+  }
+
+  buildGuessRow('rowA','a');
+  buildGuessRow('rowB','b');
+  el('dateInput').value=todayStr();
+  el('dateInput').addEventListener('change',refreshSave);
+  el('saveBtn').addEventListener('click',onSave);
+  bindSettings();
+  syncSettingsInputs();
+  refreshSave();
+  renderAll();
+
+  refreshFromServer();
+  setInterval(refreshFromServer,60000);
+  document.addEventListener('visibilitychange',function(){
+    if(!document.hidden) refreshFromServer();
+  });
+})();
+</script>
+</body>
+</html>
